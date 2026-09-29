@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from auth_dependencies import usuario_atual
@@ -30,7 +31,11 @@ def criar_conta(dados: UsuarioCriar, session: Session = Depends(pegar_sessao)):
         admin=False,
     )
     session.add(usuario)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=409, detail="Este e-mail já está cadastrado")
     session.refresh(usuario)
     return usuario
 

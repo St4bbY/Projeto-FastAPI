@@ -1,25 +1,12 @@
-from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from models import Base, db
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Create missing tables for an easy local first run. Use Alembic for schema changes.
-    Base.metadata.create_all(bind=db)
-    yield
-
-
 app = FastAPI(
     title="API de Pedidos",
     description="API para cadastro de clientes e gerenciamento dos próprios pedidos.",
     version="1.0.0",
-    lifespan=lifespan,
 )
 
 from auth_routes import auth_router

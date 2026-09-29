@@ -1,19 +1,21 @@
 # API de Pedidos
 
-API REST para cadastro de clientes e gerenciamento de pedidos. O projeto usa FastAPI, SQLAlchemy, SQLite, autenticação JWT e hashes bcrypt para senhas.
+API REST para cadastro de clientes e gerenciamento de pedidos, construída com FastAPI, SQLAlchemy e SQLite. A API oferece autenticação JWT, hashes bcrypt, catálogo de pizzas e pedidos com itens e preços calculados no servidor.
 
 ## Funcionalidades
 
-- Cadastro com validação de nome, email e senha.
-- Login com JWT de 30 minutos e rota para consultar a conta autenticada.
-- Criação, listagem e consulta dos próprios pedidos.
-- Cancelamento de pedidos enquanto estiverem pendentes.
-- Validação de dados e documentação interativa gerada pelo FastAPI.
-- Criação automática das tabelas ao iniciar em um banco novo.
+- Cadastro e login com validação e email único sem distinção entre maiúsculas e minúsculas.
+- JWT com validade de 30 minutos e rota para consultar o usuário autenticado.
+- Catálogo de produtos com preços definidos no servidor.
+- Criação de pedidos com itens, quantidades e total calculado pela API.
+- Consulta paginada dos próprios pedidos e consulta por identificador.
+- Cancelamento de pedidos pendentes e registro de data de criação.
+- Migrações de banco gerenciadas pelo Alembic.
+- Testes de autenticação, catálogo, pedidos, paginação e controle de acesso.
 
 ## Tecnologias
 
-Python · FastAPI · SQLAlchemy · SQLite · Alembic · Pydantic · JWT · bcrypt
+Python · FastAPI · SQLAlchemy · SQLite · Alembic · Pydantic · JWT · bcrypt · pytest
 
 ## Requisitos
 
@@ -22,37 +24,38 @@ Python · FastAPI · SQLAlchemy · SQLite · Alembic · Pydantic · JWT · bcryp
 
 ## Instalação no Windows (PowerShell)
 
-Clone o repositório e entre na pasta:
-
 ```powershell
 git clone https://github.com/St4bbY/Projeto-FastAPI.git
 cd Projeto-FastAPI
-```
-
-Crie e ative o ambiente virtual e instale as dependências:
-
-```powershell
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
+Copy-Item .env.example .env
 ```
 
-Configure a chave JWT:
+Gere uma chave secreta:
 
 ```powershell
-Copy-Item .env.example .env
 py -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
-Copie a chave gerada para `SECRET_KEY` no arquivo `.env`. Não publique esse arquivo.
+Cole a chave em `SECRET_KEY` no arquivo `.env`. Não publique `.env`.
 
-## Iniciar
+## Banco de dados e execução
+
+Execute as migrações para criar ou atualizar o banco:
+
+```powershell
+alembic upgrade head
+```
+
+Inicie a API:
 
 ```powershell
 uvicorn main:app --reload
 ```
 
-A API fica em `http://127.0.0.1:8000`. A página `/` informa o status; a documentação interativa está em `/docs` e a documentação alternativa em `/redoc`.
+A API fica em `http://127.0.0.1:8000`; o status está em `/`, a documentação interativa em `/docs` e a documentação alternativa em `/redoc`.
 
 ## Fluxo rápido
 
@@ -66,42 +69,52 @@ A API fica em `http://127.0.0.1:8000`. A página `/` informa o status; a documen
 }
 ```
 
-2. Faça login em `POST /auth/login` usando o mesmo email e senha. Copie `access_token` da resposta.
-3. No botão **Authorize** do `/docs`, informe `Bearer <access_token>`.
-4. Crie um pedido em `POST /pedidos/`:
+2. Faça login em `POST /auth/login` e copie `access_token`.
+3. No botão **Authorize** da página `/docs`, informe `Bearer <access_token>`.
+4. Consulte `GET /pedidos/catalogo` para ver os produtos e seus IDs.
+5. Crie um pedido em `POST /pedidos/`:
 
 ```json
 {
-  "preco": 42.5
+  "itens": [
+    {"produto_id": 1, "quantidade": 2},
+    {"produto_id": 5, "quantidade": 1}
+  ]
 }
 ```
 
-O usuário do pedido vem do token autenticado. Use `GET /pedidos/` para listar seus pedidos, `GET /pedidos/{id}` para consultar um e `PATCH /pedidos/{id}/cancelar` para cancelar um pedido pendente.
+O preço vem do catálogo. O cliente não envia nem escolhe o total do pedido.
 
 ## Endpoints
 
 | Método | Caminho | Acesso | Descrição |
 | --- | --- | --- | --- |
 | `GET` | `/` | Público | Status da API |
-| `POST` | `/auth/criar_conta` | Público | Cadastrar conta |
+| `POST` | `/auth/criar_conta` | Público | Criar conta |
 | `POST` | `/auth/login` | Público | Obter token JWT |
 | `GET` | `/auth/me` | JWT | Consultar conta atual |
-| `POST` | `/pedidos/` | JWT | Criar pedido |
-| `GET` | `/pedidos/` | JWT | Listar os próprios pedidos |
+| `GET` | `/pedidos/catalogo` | Público | Listar produtos e preços |
+| `POST` | `/pedidos/` | JWT | Criar pedido com itens do catálogo |
+| `GET` | `/pedidos/?deslocamento=0&limite=20` | JWT | Listar pedidos paginados |
 | `GET` | `/pedidos/{id}` | JWT | Consultar pedido próprio |
 | `PATCH` | `/pedidos/{id}/cancelar` | JWT | Cancelar pedido pendente |
 
+A paginação aceita `limite` entre 1 e 100 e `deslocamento` a partir de 0. Cada usuário só pode acessar os próprios pedidos.
+
+## Testes
+
+Instale as dependências de desenvolvimento e rode:
+
+```powershell
+pip install -r requirements-dev.txt
+pytest
+```
+
+Os testes usam um banco SQLite em memória e não alteram `banco.db`.
+
 ## Configuração
 
-- `SECRET_KEY`: chave privada para assinar os tokens. Obrigatória; gere uma chave diferente para cada ambiente.
-- `DATABASE_URL`: endereço do banco. O padrão local é `sqlite:///banco.db`.
+- `SECRET_KEY`: chave privada obrigatória para assinar JWTs.
+- `DATABASE_URL`: endereço do banco; o padrão local é `sqlite:///banco.db`.
 
-## Segurança e dados locais
-
-Senhas nunca são retornadas pela API e são armazenadas com bcrypt. Tokens expiram em 30 minutos. Cada conta só pode consultar e cancelar os próprios pedidos. O arquivo `.gitignore` exclui `.env`, ambientes virtuais e o banco SQLite local.
-
-## Melhorias futuras
-
-- Catálogo de produtos e itens vinculados a cada pedido.
-- Testes automatizados para autenticação e pedidos.
-- Deploy público com banco de dados gerenciado.
+Senhas, banco local e ambiente virtual são ignorados pelo Git. Não use a chave de exemplo em produção.
