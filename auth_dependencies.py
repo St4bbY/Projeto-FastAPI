@@ -23,6 +23,6 @@ def usuario_atual(
         raise HTTPException(status_code=401, detail="Token inv\u00e1lido ou expirado")
 
     usuario = session.query(Usuario).filter(Usuario.id == id_usuario).first()
-    if not usuario:
+    if not usuario or not usuario.ativo:
         raise HTTPException(status_code=401, detail="Usu\u00e1rio do token n\u00e3o existe")
     return usuario

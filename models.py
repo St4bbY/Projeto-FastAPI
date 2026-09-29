@@ -1,8 +1,13 @@
+import os
+
 from sqlalchemy import create_engine, Column, String, Integer, Boolean, Float, ForeignKey
 from sqlalchemy.orm import declarative_base
-from sqlalchemy_utils.types import ChoiceType
+from dotenv import load_dotenv
 
-db = create_engine("sqlite:///banco.db")
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///banco.db")
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+db = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
 
 Base = declarative_base()
 

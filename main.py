@@ -1,20 +1,34 @@
-# Para rodar o codígo, usar o comando: uvicorn main:app --reload
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from passlib.context import CryptContext
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+from models import Base, db
 
-app = FastAPI()
 
-bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Create missing tables for an easy local first run. Use Alembic for schema changes.
+    Base.metadata.create_all(bind=db)
+    yield
+
+
+app = FastAPI(
+    title="API de Pedidos",
+    description="API para cadastro de clientes e gerenciamento dos próprios pedidos.",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
 from auth_routes import auth_router
 from order_routes import order_router
 
 app.include_router(auth_router)
 app.include_router(order_router)
+
+
+@app.get("/", tags=["status"])
+async def health_check():
+    return {"status": "ok", "servico": "API de Pedidos", "documentacao": "/docs"}
