@@ -24,9 +24,9 @@ def criar_conta(dados: UsuarioCriar, session: Session = Depends(pegar_sessao)):
         raise HTTPException(status_code=409, detail="Este e-mail já está cadastrado")
 
     usuario = Usuario(
-        dados.nome.strip(),
-        email,
-        bcrypt_context.hash(dados.senha),
+        nome=dados.nome.strip(),
+        email=email,
+        senha=bcrypt_context.hash(dados.senha),
         ativo=True,
         admin=False,
     )

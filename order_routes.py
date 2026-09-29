@@ -72,7 +72,7 @@ def criar_pedido(
     if ids_invalidos:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Produto(s) inexistente(s) ou indisponível(is): {ids_invalidos}",
+            detail=f"Produtos não encontrados ou indisponíveis: {ids_invalidos}",
         )
 
     quantidades_por_produto: dict[int, int] = {}

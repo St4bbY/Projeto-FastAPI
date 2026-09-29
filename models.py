@@ -38,13 +38,6 @@ class Usuario(Base):
     admin = Column(Boolean, nullable=False, default=False)
     pedidos = relationship("Pedido", back_populates="cliente")
 
-    def __init__(self, nome, email, senha, ativo=True, admin=False):
-        self.nome = nome
-        self.email = email
-        self.senha = senha
-        self.ativo = ativo
-        self.admin = admin
-
 
 class Produto(Base):
     __tablename__ = "produtos"
@@ -68,11 +61,6 @@ class Pedido(Base):
     cliente = relationship("Usuario", back_populates="pedidos")
     itens = relationship("ItemPedido", back_populates="ordem", cascade="all, delete-orphan")
 
-    def __init__(self, usuario, status="PENDENTE", preco=0):
-        self.usuario = usuario
-        self.status = status
-        self.preco = preco
-
 
 class ItemPedido(Base):
     __tablename__ = "itens_pedido"
@@ -86,14 +74,3 @@ class ItemPedido(Base):
     produto_id = Column(Integer, ForeignKey("produtos.id"), nullable=True)
     ordem = relationship("Pedido", back_populates="itens")
     produto = relationship("Produto")
-
-    def __init__(self, quantidade, sabor, tamanho, preco_unitario, pedido=None, produto_id=None):
-        self.quantidade = quantidade
-        self.sabor = sabor
-        self.tamanho = tamanho
-        self.preco_unitario = preco_unitario
-        if pedido is not None:
-            self.ordem = pedido if isinstance(pedido, Pedido) else None
-            if not isinstance(pedido, Pedido):
-                self.pedido_id = pedido
-        self.produto_id = produto_id

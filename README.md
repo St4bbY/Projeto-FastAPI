@@ -1,28 +1,10 @@
-# API de Pedidos
+# Projeto FastAPI
 
-API REST para cadastro de clientes e gerenciamento de pedidos, construída com FastAPI, SQLAlchemy e SQLite. A API oferece autenticação JWT, hashes bcrypt, catálogo de pizzas e pedidos com itens e preços calculados no servidor.
+API de pedidos de uma pizzaria, feita para praticar Python, FastAPI e SQLAlchemy. Dá para criar uma conta, consultar o cardápio e acompanhar os próprios pedidos. Não há interface web: as requisições podem ser feitas pelo Swagger em `/docs`.
 
-## Funcionalidades
+## Rodar no Windows
 
-- Cadastro e login com validação e email único sem distinção entre maiúsculas e minúsculas.
-- JWT com validade de 30 minutos e rota para consultar o usuário autenticado.
-- Catálogo de produtos com preços definidos no servidor.
-- Criação de pedidos com itens, quantidades e total calculado pela API.
-- Consulta paginada dos próprios pedidos e consulta por identificador.
-- Cancelamento de pedidos pendentes e registro de data de criação.
-- Migrações de banco gerenciadas pelo Alembic.
-- Testes de autenticação, catálogo, pedidos, paginação e controle de acesso.
-
-## Tecnologias
-
-Python · FastAPI · SQLAlchemy · SQLite · Alembic · Pydantic · JWT · bcrypt · pytest
-
-## Requisitos
-
-- Python 3.11 ou superior
-- pip
-
-## Instalação no Windows (PowerShell)
+Com Python 3.11 ou superior instalado, clone o projeto e prepare o ambiente:
 
 ```powershell
 git clone https://github.com/St4bbY/Projeto-FastAPI.git
@@ -33,33 +15,29 @@ pip install -r requirements-dev.txt
 Copy-Item .env.example .env
 ```
 
-Gere uma chave secreta:
+Gere uma chave para os tokens e coloque o resultado no campo `SECRET_KEY` do `.env`:
 
 ```powershell
 py -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
-Cole a chave em `SECRET_KEY` no arquivo `.env`. Não publique `.env`.
-
-## Banco de dados e execução
-
-Execute as migrações para criar ou atualizar o banco:
+Crie as tabelas e carregue o cardápio inicial com as migrações:
 
 ```powershell
 alembic upgrade head
 ```
 
-Inicie a API:
+Agora inicie a API:
 
 ```powershell
 uvicorn main:app --reload
 ```
 
-A API fica em `http://127.0.0.1:8000`; o status está em `/`, a documentação interativa em `/docs` e a documentação alternativa em `/redoc`.
+Abra `http://127.0.0.1:8000/docs`. O banco local é SQLite e fica no arquivo `banco.db`.
 
-## Fluxo rápido
+## Usar a API
 
-1. Crie uma conta em `POST /auth/criar_conta`:
+Primeiro, crie uma conta em `POST /auth/criar_conta`:
 
 ```json
 {
@@ -69,10 +47,9 @@ A API fica em `http://127.0.0.1:8000`; o status está em `/`, a documentação i
 }
 ```
 
-2. Faça login em `POST /auth/login` e copie `access_token`.
-3. No botão **Authorize** da página `/docs`, informe `Bearer <access_token>`.
-4. Consulte `GET /pedidos/catalogo` para ver os produtos e seus IDs.
-5. Crie um pedido em `POST /pedidos/`:
+Entre em `POST /auth/login` com o mesmo email e senha. Copie o `access_token` da resposta e use o botão **Authorize** no Swagger para acessar as rotas protegidas.
+
+O cardápio está em `GET /pedidos/catalogo`. Para criar um pedido, envie os IDs dos produtos e as quantidades para `POST /pedidos/`:
 
 ```json
 {
@@ -83,38 +60,34 @@ A API fica em `http://127.0.0.1:8000`; o status está em `/`, a documentação i
 }
 ```
 
-O preço vem do catálogo. O cliente não envia nem escolhe o total do pedido.
+O servidor busca os preços no catálogo e calcula o total. Assim, o valor não depende do que o cliente enviar. O cardápio inicial tem três sabores em tamanhos P, M e G; não há ainda uma tela ou rota administrativa para editar preços.
 
-## Endpoints
+## Rotas disponíveis
 
-| Método | Caminho | Acesso | Descrição |
-| --- | --- | --- | --- |
-| `GET` | `/` | Público | Status da API |
-| `POST` | `/auth/criar_conta` | Público | Criar conta |
-| `POST` | `/auth/login` | Público | Obter token JWT |
-| `GET` | `/auth/me` | JWT | Consultar conta atual |
-| `GET` | `/pedidos/catalogo` | Público | Listar produtos e preços |
-| `POST` | `/pedidos/` | JWT | Criar pedido com itens do catálogo |
-| `GET` | `/pedidos/?deslocamento=0&limite=20` | JWT | Listar pedidos paginados |
-| `GET` | `/pedidos/{id}` | JWT | Consultar pedido próprio |
-| `PATCH` | `/pedidos/{id}/cancelar` | JWT | Cancelar pedido pendente |
+| Método | Rota | Para que serve |
+| --- | --- | --- |
+| `GET` | `/` | Verificar se a API está rodando |
+| `POST` | `/auth/criar_conta` | Criar uma conta |
+| `POST` | `/auth/login` | Entrar e receber um token |
+| `GET` | `/auth/me` | Ver os dados da conta autenticada |
+| `GET` | `/pedidos/catalogo` | Consultar sabores, tamanhos e preços |
+| `POST` | `/pedidos/` | Criar um pedido |
+| `GET` | `/pedidos/` | Listar pedidos, com paginação |
+| `GET` | `/pedidos/{id}` | Consultar um pedido |
+| `PATCH` | `/pedidos/{id}/cancelar` | Cancelar um pedido pendente |
 
-A paginação aceita `limite` entre 1 e 100 e `deslocamento` a partir de 0. Cada usuário só pode acessar os próprios pedidos.
+As rotas de pedidos mostram apenas os pedidos do usuário autenticado. A listagem aceita `limite` (de 1 a 100) e `deslocamento` (a partir de 0).
 
 ## Testes
 
-Instale as dependências de desenvolvimento e rode:
+Os testes usam um banco em memória, sem mexer no `banco.db` local:
 
 ```powershell
-pip install -r requirements-dev.txt
 pytest
 ```
 
-Os testes usam um banco SQLite em memória e não alteram `banco.db`.
+As dependências de desenvolvimento, incluindo pytest, estão em `requirements-dev.txt`.
 
 ## Configuração
 
-- `SECRET_KEY`: chave privada obrigatória para assinar JWTs.
-- `DATABASE_URL`: endereço do banco; o padrão local é `sqlite:///banco.db`.
-
-Senhas, banco local e ambiente virtual são ignorados pelo Git. Não use a chave de exemplo em produção.
+`SECRET_KEY` é obrigatória. Para apontar a API a outro banco compatível com SQLAlchemy, defina `DATABASE_URL` no `.env`. Mantenha `.env` e `banco.db` fora do Git; ambos já estão no `.gitignore`.
